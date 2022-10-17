@@ -6,31 +6,23 @@ import pickle
 import pandas as pd
 import numpy as np
 
-from sklearn.utils import shuffle
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
-
-from sklearn.preprocessing import StandardScaler
-from sklearn_extra.cluster import KMedoids
-
 from modAL.models import ActiveLearner
-from modAL.uncertainty import margin_sampling
-from modAL.uncertainty import entropy_sampling
-from modAL.uncertainty import uncertainty_sampling
+
+# project import
+from commons.file import save_model
+from commons.data import encode_data
+from commons.classifiers import get_estimator
+from commons.classifiers import get_query_strategy
+from commons.classifiers import initial_pool_test_split
 
 # local imports
 from .constants import CLASSIFY_VULNERABILITY
 from .constants import ERROR_STATE
-from .constants import RISK_MAP
-from .utils import transform_data
 
 
 def load_data(filepath):
@@ -42,9 +34,10 @@ def load_data(filepath):
         'readable_exploit_date', 'audience_normalized'], inplace=True)
 
     # encoding dataset
-    df = transform_data(df)
+    df = encode_data(df)
 
-    df['label'].replace(RISK_MAP, inplace=True)
+    df['label'].replace(
+        {'LOW': 0, 'MODERATE': 1, 'IMPORTANT': 2, 'CRITICAL': 3}, inplace=True)
 
     X = df.drop(columns='label').to_numpy()
     y = df['label'].to_numpy()
@@ -52,67 +45,25 @@ def load_data(filepath):
     return X, y
 
 
-def initial_pool_test_split(X, y, initial_size, test_size):
-    # splitting data into pool and test
-    X_pool, X_test, y_pool, y_test =\
-        train_test_split(X, y, test_size=test_size)
-
-    # calculating clusters centers
-    kmedoids = KMedoids(n_clusters=initial_size)
-    kmedoids.fit(StandardScaler().fit_transform(X_pool))
-
-    # get the indexes of the medoids centers
-    initial_idx = kmedoids.medoid_indices_
-
-    # selecting elements to X_initial
-    X_initial, y_initial = X_pool[initial_idx], y_pool[initial_idx]
-
-    # removing selected elements from X_pool
-    X_pool = np.delete(X_pool, initial_idx, axis=0)
-    y_pool = np.delete(y_pool, initial_idx, axis=0)
-
-    # shuffling data
-    X_initial, y_initial = shuffle(X_initial, y_initial)
-    X_pool, y_pool = shuffle(X_pool, y_pool)
-    X_test, y_test = shuffle(X_test, y_test)
-
-    return X_initial, X_pool, X_test, y_initial, y_pool, y_test
-
-
-def get_estimator(name):
-    if name == 'rf':
-        return RandomForestClassifier()
-    elif name == 'gb':
-        return GradientBoostingClassifier()
-    elif name == 'lr':
-        return LogisticRegression(penalty='none')
-    elif name == 'svc':
-        return SVC(probability=True)
-    elif name == 'mlp':
-        return MLPClassifier()
-
-
-def get_query_strategy(name):
-    if name == 'entropy-sampling':
-        return entropy_sampling
-    elif name == 'margin-sampling':
-        return margin_sampling
-    elif name == 'uncertainty-sampling':
-        return uncertainty_sampling
-
-
 def train_model(env):
+
     try:
         path = os.path.join(env['root_folder'], 'datasets/vulns-labelled.csv')
         X, y = load_data(path)
     except FileNotFoundError:
-        env = {**env, 'errors': ['Lablled dataset not found.']}
+        env = {**env, 'errors': ['Labelled dataset not found.']}
         return (ERROR_STATE, env)
 
     config = env['model_config']
 
     X_initial, X_pool, X_test, y_initial, y_pool, y_test =\
         initial_pool_test_split(X, y, config['initial_size'], config['test_size'])
+
+    if config['encode_data']:
+        scaler = StandardScaler().fit(np.r_[X_initial, X_pool])
+        X_initial = scaler.transform(X_initial)
+        X_pool = scaler.transform(X_pool)
+        X_test = scaler.transform(X_test)
 
     learner = ActiveLearner(estimator=get_estimator(config['estimator']),
                             query_strategy=get_query_strategy(config['query_strategy']),
@@ -132,7 +83,7 @@ def train_model(env):
     # TODO: calibrate the model
 
     path = os.path.join(env['root_folder'], 'output/', 'model.pickle')
-    pickle.dump(learner, open(path, 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+    save_model(path, learner)
 
     env = {
         **env,

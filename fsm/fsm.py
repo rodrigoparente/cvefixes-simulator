@@ -1,6 +1,8 @@
 # python imports
 import os
-import json
+
+# project imports
+from commons.file import save_json
 
 
 class FSM:
@@ -42,14 +44,15 @@ class FSM:
         head, tail = os.path.split(config)
         env = {'root_folder': head, 'config_file': tail, 'path': [self.start_state]}
 
+        print('Running...')
+
         while True:
             (new_state, env) = handler(env)
 
             if new_state in self.end_states:
 
-                output = os.path.join(env['root_folder'], 'output/', 'output_env.json')
-                with open(output, 'w') as file:
-                    file.write(json.dumps(env, indent=4))
+                path = os.path.join(env['root_folder'], 'output/', 'output_env.json')
+                save_json(path, env)
 
                 print("FSM finished.")
                 break

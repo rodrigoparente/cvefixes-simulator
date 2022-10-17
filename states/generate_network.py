@@ -9,7 +9,6 @@ import numpy as np
 # local imports
 from .constants import TRAIN_MODEL
 from .constants import ERROR_STATE
-from .constants import CONTEXT_MAP
 
 
 def load_data(path, published_year):
@@ -51,16 +50,29 @@ def load_data(path, published_year):
     ]]
 
 
+def get_context(context, option):
+    context_map = {
+        'topology': ('LOCAL', 'DMZ'),
+        'asset_type': ('WORKSTATION', 'SERVER'),
+        'environment': ('DEVELOPMENT', 'PRODUCTION'),
+        'sensitive_data': (0, 1),
+        'end_of_life': (0, 1),
+        'critical_asset': (0, 1)
+    }
+
+    return context_map[context][option]
+
+
 def generate_network(env):
+
+    config = env['network_config']
 
     try:
         path = os.path.join(env['root_folder'], 'datasets/vulns.csv')
-        data = load_data(path, published_year=2019)
+        data = load_data(path, config['published_after'])
     except FileNotFoundError:
         env = {**env, 'errors': ['Vulnerability dataset not found.']}
         return (ERROR_STATE, env)
-
-    config = env['network_config']
 
     assets = dict()
     vulns = list()
@@ -77,8 +89,8 @@ def generate_network(env):
         positive = random.sample(list(assets.keys()), int(config['number_assets'] * value))
 
         for asset in assets.keys():
-            index = 1 if asset in positive else 0
-            assets[asset]['context'].setdefault(context, CONTEXT_MAP[context][index])
+            option = 1 if asset in positive else 0
+            assets[asset]['context'].setdefault(context, get_context(context, option))
 
     # assigning vulnerabilities to assets
     for asset in assets.keys():
