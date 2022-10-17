@@ -1,4 +1,5 @@
 # python imports
+from ast import literal_eval
 import os
 
 # third-party imports
@@ -36,6 +37,12 @@ def start_state(env):
             errors.append('You must set a value for MinNumberOfVulnerabilitiesPerAsset')
     else:
         errors.append('You must set a value for MaxNumberOfVulnerabilitiesPerAsset')
+
+    if config.has_option('NETWORK', 'VulnerabilitiesPublishedAfter'):
+        if int(network['VulnerabilitiesPublishedAfter']) < 2016:
+            errors.append('The vulnerabilities published year must be later than 2016.')
+    else:
+        errors.append('You must set a value for VulnerabilitiesPublishedAfter')
 
     if config.has_option('NETWORK', 'LowVulnDistribution'):
         if config.has_option('NETWORK', 'MediumVulnDistribution'):
@@ -117,6 +124,9 @@ def start_state(env):
     if not config.has_option('MODEL', 'ModelEstimator'):
         errors.append('You must set a value for ModelEstimator.')
 
+    if not config.has_option('MODEL', 'EncodeData'):
+        errors.append('You must set a value for EncodeData.')
+
     if not config.has_option('MODEL', 'QueryStrategy'):
         errors.append('You must set a value for QueryStrategy.')
 
@@ -150,6 +160,7 @@ def start_state(env):
             'number_assets': int(network['NumberOfAssets']),
             'min_vuln_per_asset': int(network['MinNumberOfVulnerabilitiesPerAsset']),
             'max_vuln_per_asset': int(network['MaxNumberOfVulnerabilitiesPerAsset']),
+            'published_after': int(network['VulnerabilitiesPublishedAfter']),
             'severity': {
                 'low': float(network['LowVulnDistribution']),
                 'medium': float(network['MediumVulnDistribution']),
@@ -170,6 +181,7 @@ def start_state(env):
             'test_size': int(model['TestSize']),
             'number_queries': int(model['NumberOfQueries']),
             'estimator': model['ModelEstimator'],
+            'encode_data': literal_eval(model['EncodeData']),
             'query_strategy': model['QueryStrategy']
         }
     }
