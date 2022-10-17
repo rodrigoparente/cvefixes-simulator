@@ -1,6 +1,5 @@
 # python imports
 import os
-import pickle
 
 # third-party imports
 import pandas as pd
