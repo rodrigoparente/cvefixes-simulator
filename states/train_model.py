@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import numpy as np
 
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
@@ -68,27 +69,39 @@ def train_model(env):
                             query_strategy=get_query_strategy(config['query_strategy']),
                             X_training=X_initial, y_training=y_initial)
 
+    X_selected = np.empty((0, 58), np.float64)
+    y_selected = np.empty(0, np.int64)
+
     for _ in range(config['number_queries']):
 
         query_idx, query_inst = learner.query(X_pool)
+
+        X_selected = np.append(X_selected, query_inst, axis=0)
+        y_selected = np.append(y_selected, y_pool[query_idx], axis=0)
 
         learner.teach(query_inst.reshape(1, -1), y_pool[query_idx])
 
         X_pool = np.delete(X_pool, query_idx, axis=0)
         y_pool = np.delete(y_pool, query_idx, axis=0)
 
-    y_pred = learner.predict(X_test)
+    try:
+        calibrated =\
+            CalibratedClassifierCV(get_estimator(config['estimator']), method='sigmoid', cv=3)
+        calibrated.fit(X_selected, y_selected)
+    except ValueError:
+        env = {**env, 'errors': ['Not enough samples to perform cross-validation.']}
+        return (ERROR_STATE, env)
 
-    # TODO: calibrate the model
+    y_pred = calibrated.predict(X_test)
 
     path = os.path.join(env['root_folder'], 'output/', 'model.pickle')
-    save_model(path, learner)
+    save_model(path, calibrated)
 
     env = {
         **env,
         'model': {
             'learner': path,
-            'score': learner.score(X_test, y_test),
+            'score': calibrated.score(X_test, y_test),
             'precision': precision_score(y_test, y_pred, average='weighted'),
             'recall': recall_score(y_test, y_pred, average='weighted'),
             'f1': f1_score(y_test, y_pred, average='weighted')
