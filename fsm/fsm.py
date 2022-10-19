@@ -1,5 +1,6 @@
 # python imports
 import os
+from datetime import datetime
 
 # project imports
 from commons.file import save_json
@@ -51,7 +52,8 @@ class FSM:
 
             if new_state in self.end_states:
 
-                path = os.path.join(env['root_folder'], 'output/', 'output_env.json')
+                filename = f"environment-{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}.json"
+                path = os.path.join(env['root_folder'], 'output/', filename)
                 save_json(path, env)
 
                 print("FSM finished.")
