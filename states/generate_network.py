@@ -63,6 +63,20 @@ def get_context(context, option):
     return context_map[context][option]
 
 
+def add_ctx(assets, asset, vulns, selected_vulns):
+    for vuln in selected_vulns:
+
+        # TODO: retrieve google trend values
+
+        vulns.append({
+            **vuln,
+            'google_trend': np.nan,
+            'google_interest': 0.0,
+            'asset_id': asset,
+            **assets[asset]['context']
+        })
+
+
 def generate_network(env):
 
     config = env['network_config']
@@ -98,31 +112,28 @@ def generate_network(env):
             config['min_vuln_per_asset'], config['max_vuln_per_asset'])
 
         assets[asset]['amount_of_vulns'] = amount_of_vulns
+        vulns_left = amount_of_vulns
 
         for severity, value in config['severity'].items():
-
-            # TODO: fix how we select the ammount of vulnerabilities
 
             selected_vulns = data.loc[data['base_severity'] == severity.upper()]\
                 .sample(n=int(amount_of_vulns * value)).to_dict(orient='records')
 
-            for vuln in selected_vulns:
+            if len(selected_vulns) > 0:
+                vulns_left -= len(selected_vulns)
 
-                vulns_set.add(vuln['cve_id'])
+            add_ctx(assets, asset, vulns, selected_vulns)
 
-                # TODO: retrieve google trend values
+        if vulns_left > 0:
+            severity = random.choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
+            selected_vulns = data.loc[data['base_severity'] == severity]\
+                .sample(n=vulns_left).to_dict(orient='records')
 
-                vulns.append({
-                    **vuln,
-                    'google_trend': np.nan,
-                    'google_interest': 0.0,
-                    'asset_id': asset,
-                    **assets[asset]['context']
-                })
+            add_ctx(assets, asset, vulns, selected_vulns)
 
     env = {
         **env,
-        'number_of_vulns': len(list(vulns_set)),
+        'number_of_vulns': len(vulns),
         'vulnerabilities': vulns,
         'cve_ids': list(vulns_set)
     }
