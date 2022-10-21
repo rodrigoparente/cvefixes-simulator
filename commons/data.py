@@ -146,3 +146,14 @@ def encode_data(data):
     data = data.reindex(sorted(data.columns), axis=1)
 
     return data
+
+
+def get_stats(df):
+    return {
+        'cvss_score': df['base_score'].sum() / df.shape[0],
+        'exploit': df.loc[~df['exploit_count'].isnull(), 'exploit_count'].shape[0],
+        'epss': df['epss'].sum() / df.shape[0],
+        'environment': df.loc[df['environment'] == 'PRODUCTION'].shape[0],
+        'asset_type': df.loc[df['asset_type'] == 'SERVER'].shape[0],
+        'critical_asset': df.loc[df['critical_asset'] == 1].shape[0]
+    }
