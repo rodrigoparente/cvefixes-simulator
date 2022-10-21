@@ -90,7 +90,6 @@ def generate_network(env):
 
     assets = dict()
     vulns = list()
-    vulns_set = set()
 
     for index in range(config['number_assets']):
         assets.setdefault(f'ASSET-{index}', {
@@ -134,8 +133,7 @@ def generate_network(env):
     env = {
         **env,
         'number_of_vulns': len(vulns),
-        'vulnerabilities': vulns,
-        'cve_ids': list(vulns_set)
+        'vulnerabilities': vulns
     }
 
     return (TRAIN_MODEL, env)
