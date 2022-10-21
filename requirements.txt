@@ -1,0 +1,7 @@
+modAL
+numpy
+pandas
+scikit-learn
+scikit-learn-extra
+jupyter
+matplotlib
