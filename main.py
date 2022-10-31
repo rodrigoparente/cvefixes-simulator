@@ -1,5 +1,6 @@
 # python imports
 import os
+import sys
 
 # project imports
 from states import start_state
@@ -25,6 +26,9 @@ from fsm import FSM
 
 if __name__ == '__main__':
 
+    if len(sys.argv) < 2:
+        exit('the program expects the config file name.')
+
     fsm = FSM()
 
     fsm.add_state(START_STATE, start_state, start_state=True)
@@ -36,6 +40,6 @@ if __name__ == '__main__':
     fsm.add_state(ERROR_STATE, error_state, error_state=True)
     fsm.add_state(END_STATE, None, end_state=True)
 
-    config_path = os.getcwd() + '/config.ini'
+    config_path = os.path.join(os.getcwd(), sys.argv[1])
 
     fsm.run(config_path)
