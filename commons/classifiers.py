@@ -7,9 +7,6 @@ from sklearn.model_selection import train_test_split
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
 
 from sklearn.preprocessing import StandardScaler
 from sklearn_extra.cluster import KMedoids
@@ -51,12 +48,6 @@ def get_estimator(name):
         return RandomForestClassifier()
     elif name == 'gb':
         return GradientBoostingClassifier()
-    elif name == 'lr':
-        return LogisticRegression(penalty='none')
-    elif name == 'svc':
-        return SVC(probability=True)
-    elif name == 'mlp':
-        return MLPClassifier()
 
 
 def get_query_strategy(name):
