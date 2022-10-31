@@ -12,7 +12,7 @@ from .constants import ERROR_STATE
 
 def start_state(env):
 
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(inline_comment_prefixes='#')
     config.read(os.path.join(env['root_folder'], env['config_file']))
 
     errors = list()
@@ -154,7 +154,7 @@ def start_state(env):
     env = {
         **env,
         'rep': int(general['NumberOfRepetitions']),
-        'curr_rep': 0,
+        'current_rep': 0,
         'fix_vulns_per_rep': int(general['NumberOfVulnsFixedInRep']),
         'network_config': {
             'number_assets': int(network['NumberOfAssets']),
