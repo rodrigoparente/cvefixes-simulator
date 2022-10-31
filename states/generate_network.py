@@ -123,12 +123,18 @@ def generate_network(env):
 
             add_ctx(assets, asset, vulns, selected_vulns)
 
-        if vulns_left > 0:
-            severity = random.choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
-            selected_vulns = data.loc[data['base_severity'] == severity]\
-                .sample(n=vulns_left).to_dict(orient='records')
+        index = 0
+        severities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+
+        while vulns_left > 0:
+            selected_vulns =\
+                data.loc[data['base_severity'] == severities[index]]\
+                    .sample(n=1).to_dict(orient='records')
 
             add_ctx(assets, asset, vulns, selected_vulns)
+
+            vulns_left -= 1
+            index = 0 if index == 3 else index + 1
 
     env = {
         **env,
