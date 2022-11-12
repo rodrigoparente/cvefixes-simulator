@@ -56,7 +56,8 @@ def get_feature_importances(learner, X, feature_names):
 
     for cls in learner.calibrated_classifiers_:
 
-        explainer = shap.Explainer(cls.base_estimator.predict, X, feature_names=feature_names)
+        explainer = shap.Explainer(
+            cls.base_estimator.predict, X, feature_names=feature_names, silent=True)
         shap_values = pd.DataFrame(explainer(X).values, columns=feature_names)
 
         feature_values = np.abs(shap_values.values).mean(0)
