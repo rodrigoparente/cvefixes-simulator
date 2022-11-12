@@ -3,5 +3,7 @@ numpy
 pandas
 scikit-learn
 scikit-learn-extra
+scikit-learn-intelex
+shap
 jupyter
 matplotlib
