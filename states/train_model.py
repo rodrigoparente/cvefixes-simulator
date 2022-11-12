@@ -14,6 +14,8 @@ from sklearn.metrics import f1_score
 
 from modAL.models import ActiveLearner
 
+import shap
+
 # project import
 from commons.file import save_model
 from commons.data import encode_data
@@ -47,31 +49,17 @@ def load_data(filepath):
     return X, y, features
 
 
-def get_fold(X_values, y_values, split):
-    can_split = True
-    for i in np.bincount(y_values):
-        if i < split:
-            can_split = False
-
-    if not can_split:
-        return KFold(n_splits=5).split(X_values)
-
-    return split
-
-
-def get_feature_importances(learner, feature_names):
+def get_feature_importances(learner, X, feature_names):
     feature_importances = pd.Series(dtype='float64')
-    std_dict = {name: [] for name in feature_names}
 
     occurrences = 0
 
     for cls in learner.calibrated_classifiers_:
 
-        feature_values = cls.base_estimator.feature_importances_
+        explainer = shap.Explainer(cls.base_estimator.predict, X, feature_names=feature_names)
+        shap_values = pd.DataFrame(explainer(X).values, columns=feature_names)
 
-        for name, value in zip(feature_names, feature_values):
-            std_dict[name].append(value)
-
+        feature_values = np.abs(shap_values.values).mean(0)
         importances = pd.Series(feature_values, index=feature_names)
 
         occurrences += 1
@@ -81,11 +69,8 @@ def get_feature_importances(learner, feature_names):
         else:
             feature_importances = importances
 
-    for key, value in std_dict.items():
-        std_dict[key] = np.std(value)
-
     feature_importances /= occurrences
-    return feature_importances, std_dict
+    return feature_importances
 
 
 def train_model(env):
@@ -116,14 +101,18 @@ def train_model(env):
 
     for _ in range(config['number_queries']):
         try:
-            calibrated = CalibratedClassifierCV(
-                base_stimator, method='sigmoid', cv=get_fold(X_selected, y_selected, split=5))
+            calibrated = CalibratedClassifierCV(base_stimator, method='isotonic', cv=5)
             calibrated.fit(X_selected, y_selected)
         except ValueError:
-            env = {**env, 'errors': ['Not enough samples to perform cross-validation.']}
-            return (ERROR_STATE, env)
+            try:
+                kfold = KFold(n_splits=2).split(X_selected)
+                calibrated = CalibratedClassifierCV(base_stimator, method='isotonic', cv=kfold)
+                calibrated.fit(X_selected, y_selected)
+            except ValueError:
+                env = {**env, 'errors': ['Not enough samples to perform cross-validation.']}
+                return (ERROR_STATE, env)
 
-        learner = ActiveLearner(calibrated.base_estimator, query_strategy)
+        learner = ActiveLearner(calibrated, query_strategy)
 
         query_idx, query_inst = learner.query(X_pool)
 
@@ -133,25 +122,20 @@ def train_model(env):
         X_pool = np.delete(X_pool, query_idx, axis=0)
         y_pool = np.delete(y_pool, query_idx, axis=0)
 
-    try:
-        calibrated = CalibratedClassifierCV(
-            base_stimator, method='sigmoid', cv=get_fold(X_selected, y_selected, split=5))
-        calibrated.fit(X_selected, y_selected)
-    except ValueError:
-        env = {**env, 'errors': ['Not enough samples to perform cross-validation.']}
-        return (ERROR_STATE, env)
+    calibrated = CalibratedClassifierCV(base_stimator, method='isotonic', cv=5)
+    calibrated.fit(X_selected, y_selected)
 
     y_pred = calibrated.predict(X_test)
 
-    path = os.path.join(env['root_folder'], 'output/', 'model.pickle')
+    network_name = env['network_config']['network_name']
+    path = os.path.join(env['root_folder'], 'output', network_name, 'model.pickle')
     save_model(path, calibrated)
 
-    feature_importances, std_dict = get_feature_importances(calibrated, feature_names)
+    feature_importances = get_feature_importances(calibrated, X_selected, feature_names)
 
     env = {
         **env,
         'feature_importances': feature_importances.to_dict(),
-        'feature_importances_std': std_dict,
         'model': {
             'learner': path,
             'accuracy': calibrated.score(X_test, y_test),
