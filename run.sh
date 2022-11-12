@@ -46,4 +46,4 @@ do
     clear
 done
 
-echo "${r}/${r} Done!"
+echo "Done!"
