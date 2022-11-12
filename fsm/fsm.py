@@ -52,8 +52,10 @@ class FSM:
 
             if new_state in self.end_states:
 
+                network_name = env['network_config']['network_name']
                 filename = f"environment-{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}.json"
-                path = os.path.join(env['root_folder'], 'output/', filename)
+
+                path = os.path.join(env['root_folder'], "output", network_name, filename)
                 save_json(path, env)
 
                 print("FSM finished.")

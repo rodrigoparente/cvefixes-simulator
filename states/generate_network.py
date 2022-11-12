@@ -107,8 +107,7 @@ def generate_network(env):
 
     # assigning vulnerabilities to assets
     for asset in assets.keys():
-        amount_of_vulns = random.randrange(
-            config['min_vuln_per_asset'], config['max_vuln_per_asset'])
+        amount_of_vulns = config['vuln_per_asset']
 
         assets[asset]['amount_of_vulns'] = amount_of_vulns
         vulns_left = amount_of_vulns

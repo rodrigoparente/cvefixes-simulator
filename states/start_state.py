@@ -22,21 +22,20 @@ def start_state(env):
 
     network = config['NETWORK']
 
+    if not config.has_option('NETWORK', 'NetworkName'):
+        errors.append('You must set a value for NetworkName')
+
     if config.has_option('NETWORK', 'NumberOfAssets'):
         if int(network['NumberOfAssets']) <= 0:
             errors.append('The number of assets must be greater then zero.')
     else:
         errors.append('You must set a value for NumberOfAssets')
 
-    if config.has_option('NETWORK', 'MaxNumberOfVulnerabilitiesPerAsset'):
-        if config.has_option('NETWORK', 'MinNumberOfVulnerabilitiesPerAsset'):
-            if int(network['MinNumberOfVulnerabilitiesPerAsset']) > \
-                    int(network['MaxNumberOfVulnerabilitiesPerAsset']):
-                errors.append('Minimum number of vuln. per asset must be lesser then maximum.')
-        else:
-            errors.append('You must set a value for MinNumberOfVulnerabilitiesPerAsset')
+    if config.has_option('NETWORK', 'NumberOfVulnerabilitiesPerAsset'):
+        if int(network['NumberOfVulnerabilitiesPerAsset']) <= 0:
+            errors.append('The number of vuln. per asset must be greater then zero.')
     else:
-        errors.append('You must set a value for MaxNumberOfVulnerabilitiesPerAsset')
+        errors.append('You must set a value for NumberOfVulnerabilitiesPerAsset')
 
     if config.has_option('NETWORK', 'VulnerabilitiesPublishedAfter'):
         if int(network['VulnerabilitiesPublishedAfter']) < 2016:
@@ -157,9 +156,9 @@ def start_state(env):
         'current_rep': 0,
         'fix_vulns_per_rep': int(general['NumberOfVulnsFixedInRep']),
         'network_config': {
+            'network_name': network['NetworkName'],
             'number_assets': int(network['NumberOfAssets']),
-            'min_vuln_per_asset': int(network['MinNumberOfVulnerabilitiesPerAsset']),
-            'max_vuln_per_asset': int(network['MaxNumberOfVulnerabilitiesPerAsset']),
+            'vuln_per_asset': int(network['NumberOfVulnerabilitiesPerAsset']),
             'published_after': int(network['VulnerabilitiesPublishedAfter']),
             'severity': {
                 'low': float(network['LowVulnDistribution']),
