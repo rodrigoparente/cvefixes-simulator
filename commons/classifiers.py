@@ -5,8 +5,16 @@ import numpy as np
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
+# patching sklearn lib to run faster
+# https://intel.github.io/scikit-learn-intelex/what-is-patching.html
+from sklearnex import patch_sklearn
+patch_sklearn(verbose=False)
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
 
 from sklearn.preprocessing import StandardScaler
 from sklearn_extra.cluster import KMedoids
@@ -48,6 +56,12 @@ def get_estimator(name):
         return RandomForestClassifier()
     elif name == 'gb':
         return GradientBoostingClassifier()
+    elif name == 'lr':
+        return LogisticRegression(penalty='none')
+    elif name == 'svc':
+        return SVC(probability=True)
+    elif name == 'mlp':
+        return MLPClassifier()
 
 
 def get_query_strategy(name):
