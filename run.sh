@@ -37,8 +37,6 @@ then
     exit
 fi
 
-rm -rf output/
-
 for i in $(seq 1 $r)
 do
     echo "${i}/${r} Running..."
