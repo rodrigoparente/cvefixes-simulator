@@ -1,6 +1,7 @@
 __pycache__/
 .vscode/
 .ipynb_checkpoints
+ipynb/results/
 datasets/
 output/
 *.png
