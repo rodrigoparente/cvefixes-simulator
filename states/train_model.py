@@ -76,6 +76,13 @@ def get_feature_importances(learner, X, feature_names):
 
 def train_model(env):
 
+    model_config = env['model_config']
+
+    # not the first iteration and
+    # the ML model was not retrained
+    if env['current_rep'] > 1 and not model_config['retrain_model']:
+        return (CLASSIFY_VULNERABILITY, env)
+
     try:
         path = os.path.join(env['root_folder'], 'datasets/vulns-labelled.csv')
         X, y, feature_names = load_data(path)
@@ -83,12 +90,10 @@ def train_model(env):
         env = {**env, 'errors': ['Labelled dataset not found.']}
         return (ERROR_STATE, env)
 
-    config = env['model_config']
-
     X_initial, X_pool, X_test, y_initial, y_pool, y_test =\
-        initial_pool_test_split(X, y, config['initial_size'], config['test_size'])
+        initial_pool_test_split(X, y, model_config['initial_size'], model_config['test_size'])
 
-    if config['encode_data']:
+    if model_config['encode_data']:
         scaler = StandardScaler().fit(np.r_[X_initial, X_pool])
         X_initial = scaler.transform(X_initial)
         X_pool = scaler.transform(X_pool)
@@ -97,10 +102,10 @@ def train_model(env):
     X_selected = X_initial.copy()
     y_selected = y_initial.copy()
 
-    base_stimator = get_estimator(config['estimator'])
-    query_strategy = get_query_strategy(config['query_strategy'])
+    base_stimator = get_estimator(model_config['estimator'])
+    query_strategy = get_query_strategy(model_config['query_strategy'])
 
-    for _ in range(config['number_queries']):
+    for _ in range(model_config['number_queries']):
         try:
             calibrated = CalibratedClassifierCV(base_stimator, method='isotonic', cv=5)
             calibrated.fit(X_selected, y_selected)

@@ -129,6 +129,9 @@ def start_state(env):
     if not config.has_option('MODEL', 'QueryStrategy'):
         errors.append('You must set a value for QueryStrategy.')
 
+    if not config.has_option('MODEL', 'RetrainModel'):
+        errors.append('You must set a value for RetrainModel.')
+
     if 'GENERAL' not in config.sections():
         errors.append('GENERAL settings not available.')
 
@@ -146,6 +149,12 @@ def start_state(env):
     else:
         errors.append('You must set a value for NumberOfVulnsFixedInRep')
 
+    if config.has_option('GENERAL', 'NumberOfNewVulnsInRep'):
+        if int(general['NumberOfNewVulnsInRep']) < 0:
+            errors.append('The number of new vuln. per rep must be greater or equal to zero.')
+    else:
+        errors.append('You must set a value for NumberOfNewVulnsInRep')
+
     if len(errors) > 0:
         env = {**env, 'errors': errors}
         return (ERROR_STATE, env)
@@ -153,8 +162,9 @@ def start_state(env):
     env = {
         **env,
         'rep': int(general['NumberOfRepetitions']),
-        'current_rep': 0,
+        'current_rep': 1,
         'fix_vulns_per_rep': int(general['NumberOfVulnsFixedInRep']),
+        'new_vulns_per_rep': int(general['NumberOfNewVulnsInRep']),
         'network_config': {
             'network_name': network['NetworkName'],
             'number_assets': int(network['NumberOfAssets']),
@@ -181,7 +191,8 @@ def start_state(env):
             'number_queries': int(model['NumberOfQueries']),
             'estimator': model['ModelEstimator'],
             'encode_data': literal_eval(model['EncodeData']),
-            'query_strategy': model['QueryStrategy']
+            'query_strategy': model['QueryStrategy'],
+            'retrain_model': literal_eval(model['RetrainModel'])
         }
     }
 
