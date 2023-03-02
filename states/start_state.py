@@ -4,6 +4,7 @@ import os
 
 # third-party imports
 import configparser
+import numpy as np
 
 # local imports
 from .constants import GENERATE_NETWORK
@@ -11,6 +12,8 @@ from .constants import ERROR_STATE
 
 
 def start_state(env):
+
+    # parsing config file for errors
 
     config = configparser.ConfigParser(inline_comment_prefixes='#')
     config.read(os.path.join(env['root_folder'], env['config_file']))
@@ -31,11 +34,11 @@ def start_state(env):
     else:
         errors.append('You must set a value for NumberOfAssets')
 
-    if config.has_option('NETWORK', 'NumberOfVulnerabilitiesPerAsset'):
-        if int(network['NumberOfVulnerabilitiesPerAsset']) <= 0:
-            errors.append('The number of vuln. per asset must be greater then zero.')
+    if config.has_option('NETWORK', 'NumberOfVulnerabilities'):
+        if int(network['NumberOfVulnerabilities']) <= 0:
+            errors.append('The number of vuln. must be greater then zero.')
     else:
-        errors.append('You must set a value for NumberOfVulnerabilitiesPerAsset')
+        errors.append('You must set a value for NumberOfVulnerabilities')
 
     if config.has_option('NETWORK', 'VulnerabilitiesPublishedAfter'):
         if int(network['VulnerabilitiesPublishedAfter']) < 2016:
@@ -155,9 +158,14 @@ def start_state(env):
     else:
         errors.append('You must set a value for NumberOfNewVulnsInRep')
 
+    if not config.has_option('GENERAL', 'RandomSeed'):
+        errors.append('You must set a random number to be used as seed of the simulation or None')
+
     if len(errors) > 0:
         env = {**env, 'errors': errors}
         return (ERROR_STATE, env)
+
+    # building env file
 
     env = {
         **env,
@@ -165,10 +173,11 @@ def start_state(env):
         'current_rep': 1,
         'fix_vulns_per_rep': int(general['NumberOfVulnsFixedInRep']),
         'new_vulns_per_rep': int(general['NumberOfNewVulnsInRep']),
+        'rng': np.random.default_rng(literal_eval(general['RandomSeed'])),
         'network_config': {
             'network_name': network['NetworkName'],
             'number_assets': int(network['NumberOfAssets']),
-            'vuln_per_asset': int(network['NumberOfVulnerabilitiesPerAsset']),
+            'number_vulns': int(network['NumberOfVulnerabilities']),
             'published_after': int(network['VulnerabilitiesPublishedAfter']),
             'severity': {
                 'low': float(network['LowVulnDistribution']),

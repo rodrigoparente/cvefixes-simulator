@@ -43,7 +43,7 @@ class FSM:
         handler = self.handlers[self.start_state]
 
         head, tail = os.path.split(config)
-        env = {'root_folder': head, 'config_file': tail, 'path': [self.start_state]}
+        env = {'root_folder': head, 'config_file': tail}
 
         print('Running...')
 
@@ -52,8 +52,24 @@ class FSM:
 
             if new_state in self.end_states:
 
+                # deleting saved model
+
+                os.remove(env['model']['learner'])
+
+                # cleaning unused env fields
+
+                del env['rng']
+                del env['current_rep']
+                del env['model']['learner']
+                del env['cvss_vulnerabilities']
+                del env['frape_vulnerabilities']
+                del env['stats']['cvss']['vulns_sorted']
+                del env['stats']['frape']['vulns_sorted']
+
+                # saving env to disk
+
                 network_name = env['network_config']['network_name']
-                filename = f"environment-{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}.json"
+                filename = f"environment-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}.json"
 
                 path = os.path.join(env['root_folder'], "output", network_name, filename)
                 save_json(path, env)
@@ -61,5 +77,4 @@ class FSM:
                 print("FSM finished.")
                 break
 
-            env['path'].append(new_state)
             handler = self.handlers[new_state]

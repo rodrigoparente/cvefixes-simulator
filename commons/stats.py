@@ -24,7 +24,7 @@ def get_mean_value(df, column):
     return 0
 
 
-def get_stats(df):
+def get_abs_values(df):
 
     return {
         'base_score': get_mean_value(df, 'base_score'),
@@ -86,3 +86,13 @@ def get_stats(df):
         'google_trend_none': df.loc[df['google_trend'] == 'none'].shape[0],
         'google_trend_steady': df.loc[df['google_trend'] == 'steady'].shape[0]
     }
+
+
+def get_value_counts(df, column, keys):
+    tmp = df[column].value_counts().to_dict()
+
+    for key in keys:
+        if key not in tmp:
+            tmp.setdefault(key, 0)
+
+    return tmp

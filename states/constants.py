@@ -1,3 +1,5 @@
+# states names
+
 START_STATE = 'START_STATE'
 GENERATE_NETWORK = 'GENERATE_NETWORK'
 TRAIN_MODEL = 'TRAIN_MODEL'
@@ -6,3 +8,19 @@ PRIORITIZE_VULNERABILITY = 'PRIORITIZE_VULNERABILITY'
 FIX_VULNERABILITY = 'FIX_VULNERABILITY'
 END_STATE = 'END_STATE'
 ERROR_STATE = 'ERROR_STATE'
+
+# labels
+
+SEVERITY_LABELS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+RISK_LABELS = ['LOW', 'MODERATE', 'IMPORTANT', 'CRITICAL']
+
+# context values
+
+CONTEXT_MAP = {
+    'topology': ('LOCAL', 'DMZ'),
+    'asset_type': ('WORKSTATION', 'SERVER'),
+    'environment': ('DEVELOPMENT', 'PRODUCTION'),
+    'sensitive_data': (0, 1),
+    'end_of_life': (0, 1),
+    'critical_asset': (0, 1)
+}

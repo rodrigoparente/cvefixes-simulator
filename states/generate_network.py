@@ -1,6 +1,5 @@
 # python imports
 import os
-from collections import Counter
 
 # third-party imports
 import copy
@@ -10,6 +9,7 @@ import pandas as pd
 # local imports
 from .constants import TRAIN_MODEL
 from .constants import ERROR_STATE
+from .constants import CONTEXT_MAP
 
 
 def load_data(path, published_year):
@@ -51,7 +51,11 @@ def load_data(path, published_year):
     ]]
 
 
-def generate_assets(number_assets, context_values):
+def generate_assets(env, number_assets, context_values):
+
+    # loading config values from env
+
+    rng = env['rng']
 
     # generating assets
 
@@ -62,57 +66,69 @@ def generate_assets(number_assets, context_values):
 
     # assigning context to assets
 
-    context_map = {
-        'topology': ('LOCAL', 'DMZ'),
-        'asset_type': ('WORKSTATION', 'SERVER'),
-        'environment': ('DEVELOPMENT', 'PRODUCTION'),
-        'sensitive_data': (0, 1),
-        'end_of_life': (0, 1),
-        'critical_asset': (0, 1)
-    }
-
     for context, value in context_values.items():
-        positive = np.random.choice(list(assets.keys()), int(number_assets * value))
+        positive = rng.choice(list(assets.keys()), size=round(number_assets * value))
 
         for asset in assets.keys():
             option = 1 if asset in positive else 0
-            assets[asset].setdefault(context, context_map[context][option])
+            assets[asset].setdefault(context, CONTEXT_MAP[context][option])
 
     return assets
 
 
-def assigning_vulnerabilities(assets, vulns_map, vulns, max_vulns_per_asset):
+def generate_vulnerabilities(env, assets, n_vulns):
 
-    selected_vulns = copy.deepcopy(vulns)
-    len_selected_vulns = len(selected_vulns)
+    # loading config values from env
 
-    for asset_id, context in assets:
+    root_folder = env['root_folder']
+    rng = env['rng']
 
-        counter = Counter(item['asset_id'] for item in vulns_map)
-        amount_of_vulns_in_asset = counter[asset_id]
+    network_config = env['network_config']
+    published_after = network_config['published_after']
+    vulns_dist = network_config['severity']
 
-        amount_of_selected_vulns = max_vulns_per_asset - amount_of_vulns_in_asset
+    # loading vulnerabilities dataset
 
-        if amount_of_selected_vulns > len_selected_vulns:
-            amount_of_selected_vulns = len_selected_vulns
+    data = None
 
-        while amount_of_selected_vulns > 0:
-            vuln = selected_vulns.pop()
+    try:
+        path = os.path.join(root_folder, 'datasets/vulns.csv')
+        data = load_data(path, published_after)
+    except FileNotFoundError:
+        raise FileNotFoundError('Vulnerability dataset not found.')
 
-            vulns_map.append({
-                **vuln,
-                **extra_info(vuln['cve_id']),
-                'asset_id': asset_id,
-                **context
-            })
+    # randomly selecting vulnerabilities
 
-            amount_of_selected_vulns -= 1
-            len_selected_vulns -= 1
+    vulns = list()
 
-        # when all vulns are
-        # attributed break the loop
-        if len_selected_vulns == 0:
-            break
+    for severity, value in vulns_dist.items():
+        filtered_vulns = data.loc[data['base_severity'] == severity.upper()]
+
+        selected_vulns_cves = rng.choice(
+            filtered_vulns['cve_id'].tolist(), size=round(n_vulns * value), replace=False)
+
+        selected_vulns = filtered_vulns.loc[
+            filtered_vulns['cve_id'].isin(selected_vulns_cves)].to_dict(orient='records')
+
+        vulns.extend(selected_vulns)
+
+    # randomly selecting the assets to assing the new vulnerabilities
+
+    asset_ids = list(rng.choice(list(assets.keys()), size=len(vulns)))
+
+    # assigning vulnerabilities to the selected assets
+
+    vulns_list = list()
+
+    for vuln, asset_id in zip(vulns, asset_ids):
+        vulns_list.append({
+            **vuln,
+            **extra_info(vuln['cve_id']),
+            'asset_id': asset_id,
+            **assets[asset_id]
+        })
+
+    return vulns_list
 
 
 def extra_info(cve_id):
@@ -128,103 +144,56 @@ def extra_info(cve_id):
 
 def generate_network(env):
 
-    network_config = env['network_config']
-
     assets = dict()
+
     cvss_vulnerabilities = list()
     frape_vulnerabilities = list()
 
     if env['current_rep'] > 1:
+
         assets = env['assets']
-
-        new_vulns_per_rep = env['new_vulns_per_rep']
-        vulns_per_asset = network_config['vuln_per_asset']
-
         cvss_vulnerabilities = env['cvss_vulnerabilities']
         frape_vulnerabilities = env['frape_vulnerabilities']
 
-        if new_vulns_per_rep > 0:
+        if env['new_vulns_per_rep'] > 0:
+
+            # generating assets vulnerabilities
 
             try:
-                path = os.path.join(env['root_folder'], 'datasets/vulns.csv')
-                data = load_data(path, network_config['published_after'])
+                n_vulns = env['new_vulns_per_rep']
+                vulns = generate_vulnerabilities(env, assets, n_vulns)
+
+                cvss_vulnerabilities.extend(vulns)
+                frape_vulnerabilities.extend(vulns)
             except FileNotFoundError:
                 env = {**env, 'errors': ['Vulnerability dataset not found.']}
                 return (ERROR_STATE, env)
-
-            # selecting vulnerabilities
-            selected_vulns = data.sample(n=new_vulns_per_rep).to_dict(orient='records')
-
-            # shuffling assets to make sure that
-            # new vulnerabilities appears at random
-            shuffled_assets = list(assets.items())
-            np.random.shuffle(shuffled_assets)
-
-            # assigning vulnerabilities to assets
-            for vuln_map in [cvss_vulnerabilities, frape_vulnerabilities]:
-                assigning_vulnerabilities(
-                    shuffled_assets, vuln_map, selected_vulns, vulns_per_asset)
     else:
 
+        network_config = env['network_config']
+
+        # generating network assets
+
+        n_assets = network_config['number_assets']
+        ctx_values = network_config['context']
+
+        assets = generate_assets(env, n_assets, ctx_values)
+
+        # generating assets vulnerabilities
+
         try:
-            path = os.path.join(env['root_folder'], 'datasets/vulns.csv')
-            data = load_data(path, network_config['published_after'])
+            n_vulns = network_config['number_vulns']
+            vulns = generate_vulnerabilities(env, assets, n_vulns)
+
+            cvss_vulnerabilities = copy.deepcopy(vulns)
+            frape_vulnerabilities = copy.deepcopy(vulns)
         except FileNotFoundError:
             env = {**env, 'errors': ['Vulnerability dataset not found.']}
             return (ERROR_STATE, env)
 
-        number_assets = network_config['number_assets']
-        context_values = network_config['context']
-        vulns_per_asset = network_config['vuln_per_asset']
-
-        selected_vulns = list()
-
-        # generating network assets
-        assets = generate_assets(number_assets, context_values)
-
-        # assigning vulnerabilities to assets
-        for asset_id, context in assets.items():
-            vulns_left = vulns_per_asset
-
-            asset_vulns = list()
-
-            for severity, value in network_config['severity'].items():
-                vulns = data.loc[data['base_severity'] == severity.upper()]\
-                    .sample(n=int(vulns_per_asset * value)).to_dict(orient='records')
-
-                if len(vulns) > 0:
-                    vulns_left -= len(vulns)
-                    asset_vulns.extend(vulns)
-
-            severity_index = 0
-            severities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-
-            while vulns_left > 0:
-                vulns =\
-                    data.loc[data['base_severity'] == severities[severity_index]]\
-                        .sample(n=1).to_dict(orient='records')
-
-                vulns_left -= 1
-                asset_vulns.extend(vulns)
-
-                severity_index = 0 if severity_index == 3 else severity_index + 1
-
-            for vuln in asset_vulns:
-                selected_vulns.append({
-                    **vuln,
-                    **extra_info(vuln['cve_id']),
-                    'asset_id': asset_id,
-                    **context
-                })
-
-        cvss_vulnerabilities = copy.deepcopy(selected_vulns)
-        frape_vulnerabilities = copy.deepcopy(selected_vulns)
-
     env = {
         **env,
         'assets': assets,
-        'number_of_cvss_vulns': len(cvss_vulnerabilities),
-        'number_of_frape_vulns': len(frape_vulnerabilities),
         'cvss_vulnerabilities': cvss_vulnerabilities,
         'frape_vulnerabilities': frape_vulnerabilities
     }
