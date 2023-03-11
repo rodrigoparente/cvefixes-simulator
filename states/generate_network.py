@@ -152,6 +152,7 @@ def generate_network(env):
     if env['current_rep'] > 1:
 
         assets = env['assets']
+
         cvss_vulnerabilities = env['cvss_vulnerabilities']
         frape_vulnerabilities = env['frape_vulnerabilities']
 
