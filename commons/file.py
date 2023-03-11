@@ -18,14 +18,14 @@ def save_json(path, env):
         file.write(json.dumps(env, indent=4))
 
 
-def save_model(path, model):
+def save_pickle_obj(path, model):
     check_output_path(path)
 
     with open(path, 'wb') as file:
         pickle.dump(model, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def load_model(path):
+def load_pickle_obj(path):
     if not os.path.exists(path):
         return None
 

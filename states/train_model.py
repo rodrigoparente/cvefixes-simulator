@@ -17,7 +17,7 @@ from modAL.models import ActiveLearner
 import shap
 
 # project import
-from commons.file import save_model
+from commons.file import save_pickle_obj
 from commons.data import encode_data
 from commons.classifiers import get_estimator
 from commons.classifiers import get_query_strategy
@@ -93,8 +93,9 @@ def train_model(env):
     X_initial, X_pool, X_test, y_initial, y_pool, y_test =\
         initial_pool_test_split(X, y, model_config['initial_size'], model_config['test_size'])
 
+    scaler = StandardScaler().fit(np.r_[X_initial, X_pool])
+
     if model_config['encode_data']:
-        scaler = StandardScaler().fit(np.r_[X_initial, X_pool])
         X_initial = scaler.transform(X_initial)
         X_pool = scaler.transform(X_pool)
         X_test = scaler.transform(X_test)
@@ -134,8 +135,12 @@ def train_model(env):
     y_pred = calibrated.predict(X_test)
 
     network_name = env['network_config']['network_name']
-    path = os.path.join(env['root_folder'], 'output', network_name, 'model.pickle')
-    save_model(path, calibrated)
+
+    model_path = os.path.join(env['root_folder'], 'output', network_name, 'model.pickle')
+    scaler_path = os.path.join(env['root_folder'], 'output', network_name, 'scaler.pickle')
+
+    save_pickle_obj(model_path, calibrated)
+    save_pickle_obj(scaler_path, scaler)
 
     feature_importances = get_feature_importances(calibrated, X_selected, feature_names)
 
@@ -143,7 +148,8 @@ def train_model(env):
         **env,
         'feature_importances': feature_importances.to_dict(),
         'model': {
-            'learner': path,
+            'learner': model_path,
+            'scaler': scaler_path,
             'accuracy': calibrated.score(X_test, y_test),
             'precision': precision_score(y_test, y_pred, average='weighted'),
             'recall': recall_score(y_test, y_pred, average='weighted'),
