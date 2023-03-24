@@ -32,7 +32,7 @@ class FSM:
         if error_state:
             self.error_state = name
 
-    def run(self, config):
+    def run(self, config, rng):
 
         if self.start_state is None:
             return print("You must add an start state.")
@@ -43,18 +43,21 @@ class FSM:
         handler = self.handlers[self.start_state]
 
         head, tail = os.path.split(config)
-        env = {'root_folder': head, 'config_file': tail}
-
-        print('Running...')
+        env = {
+            'root_folder': head,
+            'config_file': tail,
+            'rng': rng
+        }
 
         while True:
             (new_state, env) = handler(env)
 
             if new_state in self.end_states:
 
-                # deleting saved model
+                # deleting saved model and scaler
 
                 os.remove(env['model']['learner'])
+                os.remove(env['model']['scaler'])
 
                 # cleaning unused env fields
 
@@ -73,7 +76,6 @@ class FSM:
                 path = os.path.join(env['root_folder'], "output", network_name, filename)
                 save_json(path, env)
 
-                print("FSM finished.")
                 break
 
             handler = self.handlers[new_state]

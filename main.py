@@ -1,6 +1,10 @@
 # python imports
 import os
-import sys
+from ast import literal_eval
+
+# third-party imports
+import argparse
+import numpy as np
 
 # project imports
 from states import start_state
@@ -26,20 +30,45 @@ from fsm import FSM
 
 if __name__ == '__main__':
 
-    if len(sys.argv) < 2:
-        exit('the program expects the config file name.')
+    parser = argparse.ArgumentParser(
+        description='Security-Based Simulator for Vulnerabilities Fix')
 
-    fsm = FSM()
+    parser.add_argument('-r', '--rep', dest='rep',
+                        required=True, action='store', type=int,
+                        help='Number of repetitions of the simulation')
 
-    fsm.add_state(START_STATE, start_state, start_state=True)
-    fsm.add_state(GENERATE_NETWORK, generate_network)
-    fsm.add_state(TRAIN_MODEL, train_model)
-    fsm.add_state(CLASSIFY_VULNERABILITY, classify_vulnerability)
-    fsm.add_state(PRIORITIZE_VULNERABILITY, prioritize_vulnerability)
-    fsm.add_state(FIX_VULNERABILITY, fix_vulnerability)
-    fsm.add_state(ERROR_STATE, error_state, error_state=True)
-    fsm.add_state(END_STATE, None, end_state=True)
+    parser.add_argument('-c', '--config', dest='config',
+                        required=True, action='store',
+                        help='Configuration file path')
 
-    config_path = os.path.join(os.getcwd(), sys.argv[1])
+    parser.add_argument('-s', '--seed', dest='seed',
+                        default=None, action='store',
+                        help='Seed used to initialize the rng')
 
-    fsm.run(config_path)
+    args = parser.parse_args()
+
+    rng = np.random.default_rng(literal_eval(args.seed))
+
+    for iter in range(1, args.rep + 1):
+
+        print(f'{iter}/{args.rep}')
+
+        fsm = FSM()
+
+        fsm.add_state(START_STATE, start_state, start_state=True)
+        fsm.add_state(GENERATE_NETWORK, generate_network)
+        fsm.add_state(TRAIN_MODEL, train_model)
+        fsm.add_state(CLASSIFY_VULNERABILITY, classify_vulnerability)
+        fsm.add_state(PRIORITIZE_VULNERABILITY, prioritize_vulnerability)
+        fsm.add_state(FIX_VULNERABILITY, fix_vulnerability)
+        fsm.add_state(ERROR_STATE, error_state, error_state=True)
+        fsm.add_state(END_STATE, None, end_state=True)
+
+        config_path = os.path.join(os.getcwd(), args.config)
+
+        fsm.run(config_path, rng)
+
+        # cleaning console
+        os.system('clear')
+
+    print('Done!')

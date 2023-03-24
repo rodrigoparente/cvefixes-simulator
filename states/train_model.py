@@ -49,15 +49,16 @@ def load_data(filepath):
     return X, y, features
 
 
-def get_feature_importances(learner, X, feature_names):
+def get_feature_importances(learner, X, feature_names, seed):
+
     feature_importances = pd.Series(dtype='float64')
 
     occurrences = 0
 
     for cls in learner.calibrated_classifiers_:
 
-        explainer = shap.Explainer(
-            cls.base_estimator.predict, X, feature_names=feature_names, silent=True)
+        explainer = shap.Explainer(cls.base_estimator.predict, X, silent=True,
+                                   feature_names=feature_names, seed=seed)
         shap_values = pd.DataFrame(explainer(X).values, columns=feature_names)
 
         feature_values = np.abs(shap_values.values).mean(0)
@@ -90,8 +91,13 @@ def train_model(env):
         env = {**env, 'errors': ['Labelled dataset not found.']}
         return (ERROR_STATE, env)
 
+    # setting random seed
+    # for reproducinility
+    seed = int(env['rng'].random() * 100)
+    np.random.seed(seed)
+
     X_initial, X_pool, X_test, y_initial, y_pool, y_test =\
-        initial_pool_test_split(X, y, model_config['initial_size'], model_config['test_size'])
+        initial_pool_test_split(X, y, model_config['initial_size'], model_config['test_size'], seed)
 
     scaler = StandardScaler().fit(np.r_[X_initial, X_pool])
 
@@ -142,7 +148,8 @@ def train_model(env):
     save_pickle_obj(model_path, calibrated)
     save_pickle_obj(scaler_path, scaler)
 
-    feature_importances = get_feature_importances(calibrated, X_selected, feature_names)
+    feature_importances =\
+        get_feature_importances(calibrated, X_selected, feature_names, seed)
 
     env = {
         **env,

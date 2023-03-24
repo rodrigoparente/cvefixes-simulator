@@ -24,7 +24,15 @@ from modAL.uncertainty import entropy_sampling
 from modAL.uncertainty import uncertainty_sampling
 
 
-def initial_pool_test_split(X, y, initial_size, test_size):
+def initial_pool_test_split(X, y, initial_size, test_size, seed):
+
+    # setting random seed
+    # for reproducibility
+    np.random.seed(seed)
+
+    # shuffling data
+    X, y = shuffle(X, y)
+
     # splitting data into pool and test
     X_pool, X_test, y_pool, y_test =\
         train_test_split(X, y, test_size=test_size)

@@ -1,10 +1,9 @@
 # python imports
-from ast import literal_eval
 import os
+from ast import literal_eval
 
 # third-party imports
 import configparser
-import numpy as np
 
 # local imports
 from .constants import GENERATE_NETWORK
@@ -158,9 +157,6 @@ def start_state(env):
     else:
         errors.append('You must set a value for NumberOfNewVulnsInRep')
 
-    if not config.has_option('GENERAL', 'RandomSeed'):
-        errors.append('You must set a random number to be used as seed of the simulation or None')
-
     if len(errors) > 0:
         env = {**env, 'errors': errors}
         return (ERROR_STATE, env)
@@ -173,7 +169,6 @@ def start_state(env):
         'current_rep': 1,
         'fix_vulns_per_rep': int(general['NumberOfVulnsFixedInRep']),
         'new_vulns_per_rep': int(general['NumberOfNewVulnsInRep']),
-        'rng': np.random.default_rng(literal_eval(general['RandomSeed'])),
         'network_config': {
             'network_name': network['NetworkName'],
             'number_assets': int(network['NumberOfAssets']),
