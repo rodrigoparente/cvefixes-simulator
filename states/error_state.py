@@ -3,8 +3,7 @@ from .constants import END_STATE
 
 
 def error_state(env):
-    print(f"# An error ocurred in {env['path'][-2]}")
-    print('# Errors:')
+    print("# Error(s) ocurred...")
 
     for error in env['errors']:
         print(f'  - {error}')
