@@ -7,6 +7,8 @@ import argparse
 import numpy as np
 
 # project imports
+from fsm import FSM
+
 from states import start_state
 from states import generate_network
 from states import train_model
@@ -23,9 +25,6 @@ from states.constants import PRIORITIZE_VULNERABILITY
 from states.constants import FIX_VULNERABILITY
 from states.constants import END_STATE
 from states.constants import ERROR_STATE
-
-# local imports
-from fsm import FSM
 
 
 if __name__ == '__main__':

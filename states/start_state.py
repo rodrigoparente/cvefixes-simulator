@@ -194,9 +194,9 @@ def start_state(env):
             'test_size': int(model['TestSize']),
             'number_queries': int(model['NumberOfQueries']),
             'estimator': model['ModelEstimator'],
-            'encode_data': literal_eval(model['EncodeData']),
+            'encode_data': True if literal_eval(model['EncodeData']) else False,
             'query_strategy': model['QueryStrategy'],
-            'retrain_model': literal_eval(model['RetrainModel'])
+            'retrain_model': True if literal_eval(model['RetrainModel']) else False
         }
     }
 

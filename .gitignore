@@ -2,7 +2,8 @@ __pycache__/
 .vscode/
 .ipynb_checkpoints
 ipynb/results/
+ipynb/*/*.png
+ipynb/*/*.jpg
+ipynb/*/*.pdf
 datasets/
 output/
-*.png
-*.pdf
