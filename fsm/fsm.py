@@ -65,8 +65,6 @@ class FSM:
                 del env['current_rep']
                 del env['model']['learner']
                 del env['model']['scaler']
-                del env['cvss_vulnerabilities']
-                del env['frape_vulnerabilities']
 
                 # saving env to disk
 
